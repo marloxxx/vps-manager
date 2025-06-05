@@ -18,11 +18,19 @@ Advanced reverse proxy management system backend built with FastAPI and Python.
 - Nginx
 - Root access (required for Nginx management)
 
-### Setup
+### Quick Setup
+
+1. **Run the setup script:**
+\`\`\`bash
+chmod +x setup.sh
+sudo ./setup.sh
+\`\`\`
+
+### Manual Setup
 
 1. **Clone the repository:**
 \`\`\`bash
-git clone <repository-url>
+git clone https://github.com/marloxxx/vps-manager.git
 cd vps-manager-backend
 \`\`\`
 
@@ -187,6 +195,7 @@ vps-manager-backend/
 ├── requirements.txt       # Python dependencies
 ├── Dockerfile            # Docker configuration
 ├── docker-compose.yml    # Docker Compose configuration
+├── setup.sh              # Installation script
 └── README.md             # This file
 \`\`\`
 
@@ -211,15 +220,15 @@ For production, consider migrating to a proper database like PostgreSQL.
 
 1. **Install on server:**
 \`\`\`bash
-# Copy files to /opt/vps-manager-backend
-sudo cp -r . /opt/vps-manager-backend
+# Copy files to /opt/vps-manager
+sudo cp -r . /opt/vps-manager
 
 # Install system dependencies
 sudo apt update
 sudo apt install -y python3-venv nginx
 
 # Setup virtual environment
-cd /opt/vps-manager-backend
+cd /opt/vps-manager
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -237,9 +246,9 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/vps-manager-backend
-Environment="PATH=/opt/vps-manager-backend/venv/bin"
-ExecStart=/opt/vps-manager-backend/venv/bin/python main.py
+WorkingDirectory=/opt/vps-manager
+Environment="PATH=/opt/vps-manager/venv/bin"
+ExecStart=/opt/vps-manager/venv/bin/python main.py
 Restart=always
 
 [Install]
@@ -248,8 +257,8 @@ WantedBy=multi-user.target
 
 3. **Enable and start service:**
 \`\`\`bash
-sudo systemctl enable vps-manager-backend
-sudo systemctl start vps-manager-backend
+sudo systemctl enable vps-manager
+sudo systemctl start vps-manager
 \`\`\`
 
 ### Environment Configuration
@@ -280,7 +289,7 @@ LOG_LEVEL=INFO
 ### Logs
 
 - Application logs: `/opt/vps-manager/logs/vps-manager.log`
-- Systemd logs: `journalctl -u vps-manager-backend -f`
+- Systemd logs: `journalctl -u vps-manager -f`
 
 ## License
 

@@ -7,9 +7,9 @@ import shlex
 import psutil
 import time
 from typing import List, Optional, Dict, Any
-from fastapi import FastAPI, HTTPException, status, BackgroundTasks, Depends, Request
+from fastapi import FastAPI, HTTPException, status, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ValidationError, Field, field_validator
 from datetime import datetime, timedelta
 from pathlib import Path

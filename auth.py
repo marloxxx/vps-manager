@@ -72,7 +72,20 @@ def verify_token(token: str) -> Optional[Dict[str, Any]]:
 def load_users() -> Dict[str, UserInDB]:
     """Load users from database file"""
     if not USERS_DB.exists():
-        return {}
+        # Create default admin user
+        default_users = {
+            "admin": {
+                "id": "admin",
+                "username": "admin",
+                "email": "admin@surveyorindonesia.com",
+                "role": "admin",
+                "password_hash": hash_password("admin123"),
+                "created_at": datetime.utcnow().isoformat(),
+                "last_login": None
+            }
+        }
+        save_users(default_users)
+        return {k: UserInDB(**v) for k, v in default_users.items()}
     
     try:
         with open(USERS_DB, 'r') as f:
