@@ -29,7 +29,7 @@ BASE_DIR = Path("/opt/vps-manager")
 NGINX_DIR = Path("/etc/nginx")
 NGINX_SITES_AVAILABLE = NGINX_DIR / "sites-available"
 NGINX_SITES_ENABLED = NGINX_DIR / "sites-enabled"
-CONFIG_DB = BASE_DIR / "config_db.json"
+CONFIG_DB = BASE_DIR / "app" / "config_db.json"
 LOG_DIR = BASE_DIR / "logs"
 BACKUP_DIR = BASE_DIR / "backups"
 TEMPLATES_DIR = BASE_DIR / "templates"
@@ -71,14 +71,32 @@ app = FastAPI(
     redoc_url=None
 )
 
-# Add CORS middleware
+# Add CORS middleware with more specific configuration
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["http://10.3.1.111:3000", "http://localhost:3000", "http://127.0.0.1:3000"],
+#     allow_credentials=True,
+#     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+#     allow_headers=["*"],
+#     expose_headers=["*"],
+# )
+
+# Temporary permissive CORS for testing
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # Frontend URLs
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,  # Set to False when using allow_origins=["*"]
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.options("/{full_path:path}")
+async def options_handler(full_path: str):
+    """Handle preflight OPTIONS requests"""
+    return {"message": "OK"}
+
+# Serve static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # --- Rate Limiting ---
 request_counts = defaultdict(list)
@@ -775,30 +793,6 @@ async def reload_nginx(current_user: User = Depends(require_admin)):
         return {"message": "Nginx configuration reloaded successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to reload Nginx: {str(e)}")
-
-@app.get("/api/system/nginx/logs")
-async def get_nginx_logs(log_type: str = "error", current_user: User = Depends(get_current_user)):
-    """Get Nginx logs."""
-    try:
-        if log_type == "error":
-            log_file = "/var/log/nginx/error.log"
-        elif log_type == "access":
-            log_file = "/var/log/nginx/access.log"
-        else:
-            raise HTTPException(status_code=400, detail="Invalid log type")
-        
-        result = run_command(["tail", "-n", "100", log_file])
-        logs = result.split('\n') if result else []
-        
-        return {"logs": logs}
-    except Exception as e:
-        return {"logs": []}
-
-# Health check endpoint
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "version": "2.0.0"}
 
 # --- Background Tasks ---
 @app.on_event("startup")
