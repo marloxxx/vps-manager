@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  vps-manager-api:
+    build: .
+    container_name: vps-manager-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - /opt/vps-manager:/opt/vps-manager
+      - /etc/nginx:/etc/nginx
+      - /var/log/nginx:/var/log/nginx
+    environment:
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-key-change-in-production}
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
