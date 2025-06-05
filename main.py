@@ -49,7 +49,8 @@ LOG_FILE_NGINX_ACCESS_PREFIX = LOG_DIR
 LOG_FILE_NGINX_ERROR_PREFIX = LOG_DIR
 
 # Ensure directories exist
-for directory in [LOG_DIR, BACKUP_DIR, TEMPLATES_DIR, NGINX_SITES_AVAILABLE, NGINX_SITES_ENABLED]:
+STATIC_DIR = Path("static")
+for directory in [LOG_DIR, BACKUP_DIR, TEMPLATES_DIR, NGINX_SITES_AVAILABLE, NGINX_SITES_ENABLED, STATIC_DIR]:
     directory.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(
@@ -72,22 +73,13 @@ app = FastAPI(
 )
 
 # Add CORS middleware with more specific configuration
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["http://10.3.1.111:3000", "http://localhost:3000", "http://127.0.0.1:3000"],
-#     allow_credentials=True,
-#     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-#     allow_headers=["*"],
-#     expose_headers=["*"],
-# )
-
-# Temporary permissive CORS for testing
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,  # Set to False when using allow_origins=["*"]
-    allow_methods=["*"],
+    allow_origins=["http://10.3.1.111:3000", "http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 @app.options("/{full_path:path}")
@@ -95,8 +87,8 @@ async def options_handler(full_path: str):
     """Handle preflight OPTIONS requests"""
     return {"message": "OK"}
 
-# Serve static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Serve static files (create directory if it doesn't exist)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # --- Rate Limiting ---
 request_counts = defaultdict(list)
@@ -128,23 +120,39 @@ class ProxyLocation(BaseModel):
     @field_validator("backend")
     def validate_backend(cls, v):
         if v.startswith(('http://', 'https://')):
-            backend = v.split('://')[1]
+        # For full URLs, extract the host:port part
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(v)
+                if not parsed.hostname:
+                    raise ValueError("Invalid URL format")
+                # If port is specified, validate it
+                if parsed.port:
+                    if not (1 <= parsed.port <= 65535):
+                        raise ValueError("Port must be between 1 and 65535")
+                return v
+            except Exception:
+                raise ValueError("Invalid URL format")
         else:
-            backend = v
+            # For host:port format
+            if ':' in v:
+                parts = v.rsplit(':', 1)
+                if len(parts) != 2:
+                    raise ValueError("Backend must be in format 'host:port' or 'scheme://host:port'")
+                
+                host, port = parts
+                try:
+                    port_int = int(port)
+                    if not (1 <= port_int <= 65535):
+                        raise ValueError("Port must be between 1 and 65535")
+                except ValueError:
+                    raise ValueError("Port must be a valid integer")
+            else:
+                # Allow hostnames without ports (will use default ports)
+                if not v or not v.replace('-', '').replace('.', '').replace('_', '').isalnum():
+                    raise ValueError("Invalid hostname format")
             
-        parts = backend.rsplit(':', 1)
-        if len(parts) != 2:
-            raise ValueError("Backend must be in format 'host:port' or 'scheme://host:port'")
-            
-        host, port = parts
-        try:
-            port_int = int(port)
-            if not (1 <= port_int <= 65535):
-                raise ValueError("Port must be between 1 and 65535")
-        except ValueError:
-            raise ValueError("Port must be a valid integer")
-            
-        return v
+            return v
 
 class LoadBalancerUpstream(BaseModel):
     name: str
