@@ -1,93 +1,75 @@
 # VPS Manager Backend
 
-Advanced reverse proxy management system backend built with FastAPI and Python.
+An advanced reverse proxy management system backend built with **FastAPI** and **Python**, designed to power the VPS Manager system with robust configuration management and system monitoring capabilities.
 
-## Features
+---
 
-- **Authentication & Authorization**: JWT-based authentication with role-based access control
-- **User Management**: Complete user management with seeder support
-- **Nginx Configuration**: Dynamic Nginx configuration generation and management
-- **System Monitoring**: Real-time system statistics and health monitoring
-- **API Documentation**: Automatic OpenAPI/Swagger documentation
+## 🚀 Features
 
-## Installation
+- **🔐 Authentication & Authorization**: JWT-based authentication with role-based access control.
+- **👤 User Management**: Comprehensive user management with seeder support.
+- **⚙️ Nginx Configuration**: Dynamic generation and management of Nginx configurations.
+- **📈 System Monitoring**: Real-time system statistics and health monitoring.
+- **📚 API Documentation**: Automatic OpenAPI/Swagger documentation at `/docs`.
 
-### Prerequisites
+---
 
-- Python 3.11+
-- Nginx
-- Root access (required for Nginx management)
+## 📋 Prerequisites
+
+Before setting up the backend, ensure you have:
+- **Python**: Version 3.11 or higher.
+- **Nginx**: Installed and accessible.
+- **Root Access**: Required for Nginx management.
+- **UFW**: Configured to allow traffic on port 8000 (optional, but recommended).
+
+---
+
+## 🛠️ Installation
 
 ### Quick Setup
-
-1. **Run the setup script:**
-\`\`\`bash
+Run the provided setup script to automate installation:
+```bash
 chmod +x setup.sh
 sudo ./setup.sh
-\`\`\`
+```
 
-### Manual Setup
+The script configures the environment, installs dependencies, sets up services, and seeds default users.
 
-1. **Clone the repository:**
-\`\`\`bash
-git clone https://github.com/marloxxx/vps-manager.git
-cd vps-manager-backend
-\`\`\`
+---
 
-2. **Create virtual environment:**
-\`\`\`bash
-python3 -m venv venv
-source venv/bin/activate
-\`\`\`
-
-3. **Install dependencies:**
-\`\`\`bash
-pip install -r requirements.txt
-\`\`\`
-
-4. **Create necessary directories:**
-\`\`\`bash
-sudo mkdir -p /opt/vps-manager/{logs,backups,templates}
-sudo chown -R $USER:$USER /opt/vps-manager
-\`\`\`
-
-5. **Seed default users:**
-\`\`\`bash
-# Seed default users (admin, user, operator, manager)
-python3 seeder.py seed
-
-# Or create custom user
-python3 seeder.py create --username myuser --email user@example.com --password mypassword --role user
-\`\`\`
-
-## Usage
+## 📖 Usage
 
 ### Running the API
-
-\`\`\`bash
-# Development
+#### Development
+Start the development server with hot-reload:
+```bash
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
 
-# Production
+#### Production
+Run the production server:
+```bash
 python3 main.py
-\`\`\`
+```
 
 ### Using Docker
-
-\`\`\`bash
-# Build and run with Docker Compose
+#### With Docker Compose
+```bash
 docker-compose up -d
+```
 
-# Or build manually
+#### Manual Docker Build
+```bash
+# Build Docker image
 docker build -t vps-manager-backend .
+
+# Run container
 docker run -d -p 8000:8000 --name vps-manager-backend vps-manager-backend
-\`\`\`
+```
 
 ### User Management
-
-The seeder script provides comprehensive user management:
-
-\`\`\`bash
+The `seeder.py` script provides comprehensive user management:
+```bash
 # Seed default users
 python3 seeder.py seed
 
@@ -105,121 +87,129 @@ python3 seeder.py delete --username username
 
 # Reset password
 python3 seeder.py reset-password --username username --password newpassword
-\`\`\`
+```
 
-### Default Users
+#### Default Users
+The seeder creates the following default users:
 
-The seeder creates these default users:
+| Username   | Email                            | Password      | Role  |
+|------------|----------------------------------|---------------|-------|
+| `admin`    | admin@surveyorindonesia.com     | `admin123`    | admin |
+| `user`     | user@surveyorindonesia.com      | `user123`     | user  |
+| `operator` | operator@surveyorindonesia.com  | `operator123` | user  |
+| `manager`  | manager@surveyorindonesia.com   | `manager123`  | admin |
 
-| Username | Email | Password | Role |
-|----------|--------|----------|------|
-| admin | admin@surveyorindonesia.com | admin123 | admin |
-| user | user@surveyorindonesia.com | user123 | user |
-| operator | operator@surveyorindonesia.com | operator123 | user |
-| manager | manager@surveyorindonesia.com | manager123 | admin |
+> **⚠️ Security Note**: Change default passwords in production environments!
 
-## API Endpoints
+---
+
+## 🔍 API Endpoints
 
 ### Authentication
-
-- `POST /api/auth/login` - User login
-- `GET /api/auth/me` - Get current user info
-- `POST /api/auth/logout` - User logout
+- `POST /api/auth/login`: User login.
+- `GET /api/auth/me`: Get current user information.
+- `POST /api/auth/logout`: User logout.
 
 ### Configurations
-
-- `GET /api/configs` - List all configurations
-- `POST /api/configs` - Create new configuration
-- `GET /api/configs/{id}` - Get specific configuration
-- `PUT /api/configs/{id}` - Update configuration
-- `DELETE /api/configs/{id}` - Delete configuration
-- `POST /api/configs/{id}/toggle` - Toggle configuration status
+- `GET /api/configs`: List all configurations.
+- `POST /api/configs`: Create a new configuration.
+- `GET /api/configs/{id}`: Get a specific configuration.
+- `PUT /api/configs/{id}`: Update a configuration.
+- `DELETE /api/configs/{id}`: Delete a configuration.
+- `POST /api/configs/{id}/toggle`: Enable or disable a configuration.
 
 ### System Management
-
-- `GET /api/system/status` - Get system statistics
-- `POST /api/system/nginx/restart` - Restart Nginx (Admin only)
-- `POST /api/system/nginx/reload` - Reload Nginx (Admin only)
-- `GET /api/system/nginx/logs` - Get Nginx logs
+- `GET /api/system/status`: Retrieve system statistics.
+- `POST /api/system/nginx/restart`: Restart Nginx (Admin only).
+- `POST /api/system/nginx/reload`: Reload Nginx configuration (Admin only).
+- `GET /api/system/nginx/logs`: Retrieve Nginx logs.
 
 ### Health Check
+- `GET /health`: Check API health status.
 
-- `GET /health` - API health check
+---
 
-## Configuration
+## 🔧 Configuration
 
 ### Environment Variables
+| Variable            | Description                            | Default              | Required |
+|---------------------|----------------------------------------|----------------------|----------|
+| `JWT_SECRET_KEY`    | Secret key for JWT tokens              | None                 | Yes      |
+| `BASE_DIR`          | Base directory for VPS Manager         | `/opt/vps-manager`   | No       |
+| `LOG_LEVEL`         | Logging level (e.g., INFO, DEBUG)      | `INFO`               | No       |
 
-- `JWT_SECRET_KEY` - Secret key for JWT tokens (change in production!)
-- `BASE_DIR` - Base directory for VPS Manager (default: `/opt/vps-manager`)
+Create a `.env` file in production:
+```env
+JWT_SECRET_KEY=your-very-secure-secret-key-here
+BASE_DIR=/opt/vps-manager
+LOG_LEVEL=INFO
+```
 
 ### File Structure
-
-\`\`\`
+```
 /opt/vps-manager/
-├── config_db.json          # Configuration database
-├── users_db.json           # User database
-├── logs/                   # Application logs
-├── backups/                # Configuration backups
-└── templates/              # Configuration templates
-\`\`\`
+├── config_db.json    # Configuration database
+├── users_db.json     # User database
+├── logs/             # Application logs
+├── backups/          # Configuration backups
+├── templates/        # Configuration templates
+```
 
-## Security
+---
+
+## 🔒 Security
 
 ### Authentication
-
-- JWT-based authentication with configurable expiration
-- Role-based access control (admin/user)
-- Secure password hashing using SHA-256
+- JWT-based authentication with configurable token expiration.
+- Role-based access control (admin and user roles).
+- Secure password hashing using SHA-256.
 
 ### Permissions
-
-- **Admin users**: Full access to all features
-- **Regular users**: Can only manage their own configurations
-- **System operations**: Require admin privileges
+- **Admin Users**: Full access to all features, including system operations.
+- **Regular Users**: Limited to managing their own configurations.
+- **System Operations**: Require admin privileges.
 
 ### Rate Limiting
+- **Global**: 100 requests per hour per IP.
+- **Per-Endpoint**: Configurable limits for sensitive operations.
 
-- Global rate limiting: 100 requests per hour per IP
-- Per-endpoint rate limiting for sensitive operations
+---
 
-## Development
+## 🏗️ Development
 
 ### Project Structure
-
-\`\`\`
+```
 vps-manager-backend/
-├── main.py                 # Main FastAPI application
-├── auth.py                 # Authentication module
-├── seeder.py              # User seeder script
-├── requirements.txt       # Python dependencies
+├── main.py               # Main FastAPI application
+├── auth.py               # Authentication module
+├── seeder.py             # User seeder script
+├── requirements.txt      # Python dependencies
 ├── Dockerfile            # Docker configuration
 ├── docker-compose.yml    # Docker Compose configuration
 ├── setup.sh              # Installation script
 └── README.md             # This file
-\`\`\`
+```
 
 ### Adding New Features
-
-1. Create new endpoints in `main.py`
-2. Add authentication decorators as needed
-3. Update models and validation
-4. Add tests for new functionality
+1. Create new endpoints in `main.py`.
+2. Add authentication decorators as needed.
+3. Update models and validation schemas.
+4. Add tests for new functionality.
 
 ### Database
-
 The system uses JSON files for simplicity:
-- `users_db.json` - User accounts and authentication
-- `config_db.json` - Nginx configurations
+- `users_db.json`: Stores user accounts and authentication data.
+- `config_db.json`: Stores Nginx configurations.
 
-For production, consider migrating to a proper database like PostgreSQL.
+For production, consider migrating to a database like **PostgreSQL** for better scalability.
 
-## Deployment
+---
+
+## 🚀 Deployment
 
 ### Production Setup
-
-1. **Install on server:**
-\`\`\`bash
+1. **Install on Server**:
+```bash
 # Copy files to /opt/vps-manager
 sudo cp -r . /opt/vps-manager
 
@@ -235,10 +225,10 @@ pip install -r requirements.txt
 
 # Seed users
 python3 seeder.py seed
-\`\`\`
+```
 
-2. **Create systemd service:**
-\`\`\`ini
+2. **Create Systemd Service**:
+```ini
 [Unit]
 Description=VPS Manager Backend API
 After=network.target
@@ -253,50 +243,75 @@ Restart=always
 
 [Install]
 WantedBy=multi-user.target
-\`\`\`
+```
 
-3. **Enable and start service:**
-\`\`\`bash
+Save to `/etc/systemd/system/vps-manager.service`.
+
+3. **Enable and Start Service**:
+```bash
 sudo systemctl enable vps-manager
 sudo systemctl start vps-manager
-\`\`\`
+```
 
-### Environment Configuration
+---
 
-Create `.env` file for production:
-\`\`\`env
-JWT_SECRET_KEY=your-very-secure-secret-key-here
-BASE_DIR=/opt/vps-manager
-LOG_LEVEL=INFO
-\`\`\`
-
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### Common Issues
+1. **Permission Denied Errors**:
+   - Ensure the application runs as root for Nginx management.
+   - Verify file permissions on `/opt/vps-manager` (e.g., `sudo chmod -R 755 /opt/vps-manager`).
 
-1. **Permission denied errors:**
-   - Ensure the application runs as root for Nginx management
-   - Check file permissions on `/opt/vps-manager`
+2. **User Database Not Found**:
+   - Run the seeder: `python3 seeder.py seed`.
+   - Check if `/opt/vps-manager/users_db.json` exists.
 
-2. **User database not found:**
-   - Run the seeder: `python3 seeder.py seed`
-   - Check if `/opt/vps-manager` directory exists
-
-3. **Nginx commands fail:**
-   - Ensure Nginx is installed and accessible
-   - Check if the user has sudo privileges
+3. **Nginx Commands Fail**:
+   - Ensure Nginx is installed and accessible (`nginx -t`).
+   - Verify the user has sudo privileges for Nginx operations.
 
 ### Logs
+- **Application Logs**: `/opt/vps-manager/logs/vps-manager.log`.
+- **Systemd Logs**: `journalctl -u vps-manager -f`.
 
-- Application logs: `/opt/vps-manager/logs/vps-manager.log`
-- Systemd logs: `journalctl -u vps-manager -f`
+---
 
-## License
+## 📄 License
 
-MIT License - see LICENSE file for details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-## Support
+---
+
+## 🆘 Support
 
 For support and questions:
-- Email: support@surveyorindonesia.com
-- GitHub Issues: Create an issue on the repository
+- **Email**: support@surveyorindonesia.com
+- **GitHub Issues**: Create an issue on the repository for bugs or feature requests.
+
+### Reporting Bugs
+Include the following:
+1. **Environment**: OS, Python version, Nginx version.
+2. **Steps to Reproduce**: Detailed steps to recreate the issue.
+3. **Expected Behavior**: What should happen.
+4. **Actual Behavior**: What actually happens.
+5. **Logs**: Relevant logs from `/opt/vps-manager/logs` or `journalctl`.
+
+### Feature Requests
+Provide the following:
+1. **Use Case**: Why is this feature needed?
+2. **Description**: Detailed description of the feature.
+3. **Priority**: How important is this feature?
+
+---
+
+## 🙏 Acknowledgments
+
+- **FastAPI Team**: For the high-performance API framework.
+- **Nginx**: For the robust web server.
+- **Surveyor Indonesia**: For project sponsorship and support.
+
+---
+
+**Made with ❤️ by Surveyor Indonesia**
+
+For more information, visit our [website](https://ptsi.co.id).
