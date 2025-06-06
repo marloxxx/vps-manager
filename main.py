@@ -120,13 +120,11 @@ class ProxyLocation(BaseModel):
     @field_validator("backend")
     def validate_backend(cls, v):
         if v.startswith(('http://', 'https://')):
-        # For full URLs, extract the host:port part
             try:
                 from urllib.parse import urlparse
                 parsed = urlparse(v)
                 if not parsed.hostname:
                     raise ValueError("Invalid URL format")
-                # If port is specified, validate it
                 if parsed.port:
                     if not (1 <= parsed.port <= 65535):
                         raise ValueError("Port must be between 1 and 65535")
@@ -134,7 +132,6 @@ class ProxyLocation(BaseModel):
             except Exception:
                 raise ValueError("Invalid URL format")
         else:
-            # For host:port format
             if ':' in v:
                 parts = v.rsplit(':', 1)
                 if len(parts) != 2:
@@ -148,7 +145,6 @@ class ProxyLocation(BaseModel):
                 except ValueError:
                     raise ValueError("Port must be a valid integer")
             else:
-                # Allow hostnames without ports (will use default ports)
                 if not v or not v.replace('-', '').replace('.', '').replace('_', '').isalnum():
                     raise ValueError("Invalid hostname format")
             
@@ -164,8 +160,6 @@ class ServerConfig(BaseModel):
     id: str = Field(..., pattern=r"^[a-zA-Z0-9_\-]+$")
     server_name: str
     listen_port: int = Field(80, ge=1, le=65535)
-    ssl_cert: Optional[Path] = None
-    ssl_key: Optional[Path] = None
     locations: List[ProxyLocation] = Field(..., min_length=1)
     upstream: Optional[LoadBalancerUpstream] = None
     is_active: bool = True
@@ -219,7 +213,6 @@ async def login(login_data: LoginRequest):
     
     access_token = create_access_token(data={"sub": user.username})
     
-    # Convert UserInDB to User for response
     user_response = User(**user.model_dump())
     
     logger.info(f"User {user.username} logged in successfully")
@@ -333,20 +326,16 @@ def generate_location_block(location: ProxyLocation, upstream_name: Optional[str
     
     block = f"\n    location {sanitized_path} {{\n"
     
-    # Rate limiting
     if location.rate_limit:
         block += f"        limit_req zone=api burst=10 nodelay;\n"
     
-    # Authentication
     if location.auth_basic:
         block += f'        auth_basic "{location.auth_basic}";\n'
         block += f'        auth_basic_user_file /etc/nginx/.htpasswd;\n'
     
-    # Client max body size
     if location.client_max_body_size:
         block += f"        client_max_body_size {location.client_max_body_size};\n"
     
-    # Determine proxy target
     if upstream_name:
         proxy_pass_target = f"http://{upstream_name}"
     elif location.backend.startswith(('http://', 'https://')):
@@ -356,7 +345,6 @@ def generate_location_block(location: ProxyLocation, upstream_name: Optional[str
 
     block += f"        proxy_pass {proxy_pass_target};\n"
     
-    # Standard headers
     headers = [
         "Host $host",
         "X-Real-IP $remote_addr",
@@ -364,7 +352,6 @@ def generate_location_block(location: ProxyLocation, upstream_name: Optional[str
         "X-Forwarded-Proto $scheme"
     ]
     
-    # Websocket support
     if location.websocket:
         headers.extend([
             "Upgrade $http_upgrade",
@@ -372,24 +359,19 @@ def generate_location_block(location: ProxyLocation, upstream_name: Optional[str
         ])
         block += "        proxy_http_version 1.1;\n"
     
-    # Custom HTTP version
     if location.proxy_http_version:
         block += f"        proxy_http_version {location.proxy_http_version};\n"
     
-    # SSL verification
     if proxy_pass_target.startswith('https://') and not location.ssl_verify:
         block += "        proxy_ssl_verify off;\n"
     
-    # Timeouts
     block += "        proxy_connect_timeout 60s;\n"
     block += "        proxy_send_timeout 60s;\n"
     block += "        proxy_read_timeout 60s;\n"
     
-    # Add headers
     for header in headers:
         block += f"        proxy_set_header {header};\n"
     
-    # Custom headers
     for header, value in location.custom_headers.items():
         sanitized_value = value.replace('"', '\\"').replace('\n', '')
         block += f'        proxy_set_header {header} "{sanitized_value}";\n'
@@ -401,27 +383,17 @@ def generate_nginx_config_content(config: ServerConfig) -> str:
     """Generates the full Nginx server block configuration."""
     server_name = re.sub(r'[;\{\}]', '', config.server_name)
     
-    # Generate upstream block if needed
     upstream_block = ""
     upstream_name = None
     if config.upstream:
         upstream_name = config.upstream.name
         upstream_block = generate_upstream_block(config.upstream)
     
-    ssl_directives = ""
-    listen_directive = f"listen {config.listen_port}"
+    listen_directive = f"listen {config.listen_port} ssl http2"
     
-    # Determine SSL usage
-    use_default_ssl = config.server_name.endswith('.ptsi.co.id') and not config.ssl_cert and not config.ssl_key
-    
-    if use_default_ssl or (config.ssl_cert and config.ssl_key):
-        listen_directive += " ssl http2"
-        ssl_cert_path = DEFAULT_SSL_CERT if use_default_ssl else config.ssl_cert
-        ssl_key_path = DEFAULT_SSL_KEY if use_default_ssl else config.ssl_key
-
-        ssl_directives = f"""
-        ssl_certificate {ssl_cert_path};
-        ssl_certificate_key {ssl_key_path};
+    ssl_directives = f"""
+        ssl_certificate {DEFAULT_SSL_CERT};
+        ssl_certificate_key {DEFAULT_SSL_KEY};
         ssl_protocols TLSv1.2 TLSv1.3;
         ssl_ciphers 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305';
         ssl_prefer_server_ciphers on;
@@ -432,7 +404,6 @@ def generate_nginx_config_content(config: ServerConfig) -> str:
         ssl_stapling_verify on;
         """
 
-    # Rate limiting
     rate_limit_directives = ""
     if config.rate_limit_global:
         rate_limit_directives = f"""
@@ -442,7 +413,6 @@ def generate_nginx_config_content(config: ServerConfig) -> str:
 
     location_blocks = "".join(generate_location_block(loc, upstream_name) for loc in config.locations)
 
-    # Security headers
     security_headers = ""
     if config.security_headers:
         security_headers = """
@@ -451,14 +421,9 @@ def generate_nginx_config_content(config: ServerConfig) -> str:
         add_header X-Content-Type-Options "nosniff" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
         add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';" always;
-        """
-        
-        if ssl_directives:
-            security_headers += """
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
-            """
+        """
 
-    # Gzip compression
     gzip_config = ""
     if config.gzip_enabled:
         gzip_config = """
@@ -479,7 +444,6 @@ def generate_nginx_config_content(config: ServerConfig) -> str:
             image/svg+xml;
         """
 
-    # Logging
     access_log = f"access_log {LOG_FILE_NGINX_ACCESS_PREFIX / f'{config.id}_access.log'} main;" if config.access_log_enabled else "access_log off;"
     error_log = f"error_log {LOG_FILE_NGINX_ERROR_PREFIX / f'{config.id}_error.log'} warn;" if config.error_log_enabled else ""
 
@@ -496,14 +460,12 @@ def generate_nginx_config_content(config: ServerConfig) -> str:
     {security_headers}
     {gzip_config}
 
-    # Static file caching
     location ~* \.(jpg|jpeg|png|gif|ico|css|js|woff|woff2|ttf|eot)$ {{
         expires 30d;
         add_header Cache-Control "public, max-age=2592000";
         add_header Vary Accept-Encoding;
     }}
 
-    # Security
     location ~ /\. {{
         deny all;
     }}
@@ -526,7 +488,6 @@ async def apply_nginx_config(config: ServerConfig):
         logger.error(f"Config generation failed for {config.id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate config: {str(e)}")
 
-    # Manage symlink
     if config.is_active:
         if enabled_link.exists():
             enabled_link.unlink()
@@ -536,7 +497,6 @@ async def apply_nginx_config(config: ServerConfig):
         enabled_link.unlink()
         logger.info(f"Disabled config: {enabled_link}")
 
-    # Test and reload Nginx
     try:
         run_command(["nginx", "-t"])
         run_command(["systemctl", "reload", "nginx"])
@@ -548,47 +508,38 @@ async def apply_nginx_config(config: ServerConfig):
 def get_system_stats() -> SystemStats:
     """Get comprehensive system statistics."""
     try:
-        # Nginx status
         try:
             nginx_status = run_command(["systemctl", "is-active", "nginx"]).strip()
         except:
             nginx_status = "inactive"
         
-        # Nginx version
         try:
             nginx_version = run_command(["nginx", "-v"]).split('/')[-1]
         except:
             nginx_version = "unknown"
         
-        # System stats
         cpu_percent = psutil.cpu_percent(interval=1)
         memory = psutil.virtual_memory()
         disk = psutil.disk_usage('/')
         
-        # Uptime
         boot_time = psutil.boot_time()
         uptime_seconds = time.time() - boot_time
         uptime_days = int(uptime_seconds // 86400)
         uptime_hours = int((uptime_seconds % 86400) // 3600)
         uptime_str = f"{uptime_days}d {uptime_hours}h"
         
-        # Load average
         load_avg = os.getloadavg()[0] if hasattr(os, 'getloadavg') else 0.0
         
-        # SSL certificates count
         ssl_certs = 0
         ssl_expiring = 0
         try:
             if LETSENCRYPT_DIR.exists():
                 ssl_certs = len(list(LETSENCRYPT_DIR.iterdir()))
-                # Check for expiring certificates (within 30 days)
                 for cert_dir in LETSENCRYPT_DIR.iterdir():
                     cert_file = cert_dir / "cert.pem"
                     if cert_file.exists():
                         try:
                             result = run_command(["openssl", "x509", "-in", str(cert_file), "-noout", "-dates"])
-                            # Parse expiry date and check if within 30 days
-                            # This is a simplified check
                             ssl_expiring += 1 if "notAfter" in result else 0
                         except:
                             pass
@@ -651,20 +602,9 @@ async def create_config(config: ServerConfig, current_user: User = Depends(get_c
     """Creates a new Nginx server configuration."""
     configs = await load_configs()
     
-    # Check for duplicate ID
     if any(c.id == config.id for c in configs):
         raise HTTPException(status_code=409, detail=f"Config with ID '{config.id}' already exists")
 
-    # SSL validation
-    if (config.ssl_cert and not config.ssl_key) or (not config.ssl_cert and config.ssl_key):
-        raise HTTPException(status_code=400, detail="Both SSL cert and key must be provided or omitted")
-    
-    if config.ssl_cert and not config.ssl_cert.exists():
-        raise HTTPException(status_code=400, detail=f"SSL certificate not found: {config.ssl_cert}")
-    if config.ssl_key and not config.ssl_key.exists():
-        raise HTTPException(status_code=400, detail=f"SSL key not found: {config.ssl_key}")
-
-    # Set creator
     config.created_by = current_user.username
     
     configs.append(config)
@@ -682,7 +622,6 @@ async def update_config(config_id: str, updated_config: ServerConfig, current_us
     configs = await load_configs()
     for i, config in enumerate(configs):
         if config.id == config_id:
-            # Check permissions (users can only edit their own configs, admins can edit all)
             if current_user.role != "admin" and config.created_by != current_user.username:
                 raise HTTPException(status_code=403, detail="You can only edit your own configurations")
             
@@ -709,14 +648,12 @@ async def delete_config(config_id: str, current_user: User = Depends(get_current
     if not config_to_delete:
         raise HTTPException(status_code=404, detail=f"Config with ID '{config_id}' not found")
     
-    # Check permissions
     if current_user.role != "admin" and config_to_delete.created_by != current_user.username:
         raise HTTPException(status_code=403, detail="You can only delete your own configurations")
     
     configs = [c for c in configs if c.id != config_id]
     await save_configs(configs)
     
-    # Remove files
     config_file = NGINX_SITES_AVAILABLE / f"{config_id}.conf"
     enabled_link = NGINX_SITES_ENABLED / f"{config_id}.conf"
     
@@ -726,7 +663,6 @@ async def delete_config(config_id: str, current_user: User = Depends(get_current
         if config_file.exists():
             config_file.unlink()
     
-    # Reload Nginx
     try:
         run_command(["nginx", "-t"])
         run_command(["systemctl", "reload", "nginx"])
@@ -759,17 +695,14 @@ async def test_config(config_id: str, current_user: User = Depends(get_current_u
         raise HTTPException(status_code=404, detail=f"Config with ID '{config_id}' not found")
     
     try:
-        # Generate temporary config file
         temp_config = f"/tmp/nginx_test_{config_id}.conf"
         config_content = generate_nginx_config_content(config)
         
         with open(temp_config, 'w') as f:
             f.write(config_content)
         
-        # Test the configuration
         result = run_command(["nginx", "-t", "-c", temp_config])
         
-        # Clean up
         os.unlink(temp_config)
         
         return {"success": True, "message": "Configuration test passed"}
