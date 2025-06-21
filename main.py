@@ -460,12 +460,6 @@ def generate_nginx_config_content(config: ServerConfig) -> str:
     {security_headers}
     {gzip_config}
 
-    location ~* \.(jpg|jpeg|png|gif|ico|css|js|woff|woff2|ttf|eot)$ {{
-        expires 30d;
-        add_header Cache-Control "public, max-age=2592000";
-        add_header Vary Accept-Encoding;
-    }}
-
     location ~ /\. {{
         deny all;
     }}
