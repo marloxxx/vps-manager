@@ -8,6 +8,7 @@ import psutil
 import time
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, HTTPException, status, BackgroundTasks, Depends, WebSocket, WebSocketDisconnect, Request
+from fastapi.security import OAuth2PasswordBearer
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ValidationError, Field, field_validator
@@ -21,7 +22,140 @@ import uuid
 import jwt
 import hashlib
 
-# Authentication functions are now integrated above
+# --- Authentication Models and Functions ---
+
+# JWT Configuration
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-super-secret-key-change-in-production")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# User Database
+USERS_DB = BASE_DIR / "app" / "users_db.json"
+
+class User(BaseModel):
+    username: str
+    email: Optional[str] = None
+    role: str = "user"  # admin or user
+    is_active: bool = True
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class TokenResponse(BaseModel):
+    token: str
+    user: User
+
+def load_users() -> Dict[str, Dict]:
+    """Load users from JSON database"""
+    if not USERS_DB.exists():
+        # Create default admin user
+        default_users = {
+            "admin": {
+                "username": "admin",
+                "password": "admin123",  # Change this in production
+                "email": "admin@ptsi.co.id",
+                "role": "admin",
+                "is_active": True
+            }
+        }
+        USERS_DB.parent.mkdir(parents=True, exist_ok=True)
+        with open(USERS_DB, 'w') as f:
+            json.dump(default_users, f, indent=2)
+        return default_users
+    
+    try:
+        with open(USERS_DB, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"Error loading users: {e}")
+        return {}
+
+def save_users(users: Dict[str, Dict]):
+    """Save users to JSON database"""
+    try:
+        with open(USERS_DB, 'w') as f:
+            json.dump(users, f, indent=2)
+    except Exception as e:
+        logger.error(f"Error saving users: {e}")
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify password using simple hash comparison"""
+    return hashed_password == plain_password  # In production, use proper hashing
+
+def authenticate_user(username: str, password: str) -> Optional[User]:
+    """Authenticate user with username and password"""
+    users = load_users()
+    user_data = users.get(username)
+    
+    if not user_data:
+        return None
+    
+    if not user_data.get("is_active", True):
+        return None
+    
+    if not verify_password(password, user_data.get("password", "")):
+        return None
+    
+    return User(
+        username=user_data["username"],
+        email=user_data.get("email"),
+        role=user_data.get("role", "user"),
+        is_active=user_data.get("is_active", True)
+    )
+
+def create_access_token(data: dict):
+    """Create JWT access token"""
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def verify_token(token: str) -> Optional[dict]:
+    """Verify JWT token"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.JWTError:
+        return None
+
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
+    """Get current user from JWT token"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    payload = verify_token(token)
+    if payload is None:
+        raise credentials_exception
+    
+    username: str = payload.get("sub")
+    if username is None:
+        raise credentials_exception
+    
+    users = load_users()
+    user_data = users.get(username)
+    if user_data is None:
+        raise credentials_exception
+    
+    return User(**user_data)
+
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Require admin role for endpoint"""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required"
+        )
+    return current_user
+
+# OAuth2 scheme for token authentication
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 # --- Configuration ---
 BASE_DIR = Path("/opt/vps-manager")

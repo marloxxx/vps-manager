@@ -55,6 +55,10 @@ cd vps-manager-backend
 # Install Python dependencies
 pip install -r requirements.txt
 
+# Setup admin account
+chmod +x setup-admin.sh
+./setup-admin.sh
+
 # Run as root (required for Nginx management)
 sudo python3 main.py
 ```
@@ -301,6 +305,16 @@ GET    /api/tasks/queue/status        # Get queue status
 - **Role-based access control** (Admin/User roles)
 - **Session management** with automatic expiration
 - **Secure password handling**
+
+### **Default Admin Account**
+```bash
+Username: admin
+Password: admin123
+Email: admin@ptsi.co.id
+Role: admin
+```
+
+**⚠️ Important:** Change the default password in production!
 
 ### **Authorization**
 - **Endpoint-level permissions** for sensitive operations
