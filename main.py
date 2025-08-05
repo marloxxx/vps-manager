@@ -240,7 +240,7 @@ app = FastAPI(
 # Add CORS middleware with more specific configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://10.3.1.111:3000", "http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=["http://10.3.1.111:3000", "http://localhost:3000", "http://127.0.0.1:3000", "http://0.0.0.0:3000"],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -2503,30 +2503,53 @@ def check_alerts(metrics: SystemMetrics):
 # --- WebSocket Endpoints ---
 @app.websocket("/ws/monitoring")
 async def websocket_monitoring(websocket: WebSocket):
-    await manager.connect(websocket)
+    """WebSocket endpoint for real-time monitoring."""
     try:
+        await manager.connect(websocket)
+        logger.info(f"WebSocket client connected from {websocket.client.host}")
+        
         while True:
-            # Send metrics every 5 seconds
-            metrics = collect_system_metrics()
-            metrics_history.append(metrics)
-            
-            # Keep only last 1000 metrics
-            if len(metrics_history) > 1000:
-                metrics_history.pop(0)
-            
-            # Check alerts
-            check_alerts(metrics)
-            
-            # Send data to client
-            data = {
-                "type": "metrics",
-                "system": metrics.model_dump(),
-                "alerts": [alert.model_dump() for alert in active_alerts if alert.status == "active"]
-            }
-            await websocket.send_text(json.dumps(data))
-            await asyncio.sleep(5)
+            try:
+                # Send metrics every 5 seconds
+                metrics = collect_system_metrics()
+                metrics_history.append(metrics)
+                
+                # Keep only last 1000 metrics
+                if len(metrics_history) > 1000:
+                    metrics_history.pop(0)
+                
+                # Check alerts
+                check_alerts(metrics)
+                
+                # Send data to client
+                data = {
+                    "type": "metrics",
+                    "system": metrics.model_dump(),
+                    "alerts": [alert.model_dump() for alert in active_alerts if alert.status == "active"]
+                }
+                await websocket.send_text(json.dumps(data))
+                await asyncio.sleep(5)
+                
+            except Exception as e:
+                logger.error(f"Error in WebSocket loop: {e}")
+                # Send error message to client
+                error_data = {
+                    "type": "error",
+                    "message": "Internal server error",
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+                await websocket.send_text(json.dumps(error_data))
+                break
+                
     except WebSocketDisconnect:
+        logger.info("WebSocket client disconnected")
         manager.disconnect(websocket)
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+        try:
+            manager.disconnect(websocket)
+        except:
+            pass
 
 # --- Real-time Monitoring Endpoints ---
 @app.get("/api/monitoring/metrics")
@@ -3264,6 +3287,11 @@ class TelegramNotifier:
         """.strip()
         
         return await self.send_message(message)
+
+# Global variables for monitoring
+metrics_history: List[SystemMetrics] = []
+active_alerts: List[Alert] = []
+alert_rules: List[AlertRule] = []
 
 # Global Telegram notifier
 telegram_notifier = TelegramNotifier()
