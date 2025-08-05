@@ -196,9 +196,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# OAuth2 scheme for token authentication
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
-
 # --- Initialize FastAPI App ---
 app = FastAPI(
     title="VPS Manager API - Surveyor Indonesia",
@@ -207,6 +204,9 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url=None
 )
+
+# OAuth2 scheme for token authentication
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 # Add CORS middleware with more specific configuration
 app.add_middleware(
