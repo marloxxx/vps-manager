@@ -497,6 +497,7 @@ class SSLUploadRequest(BaseModel):
 async def login(login_data: LoginRequest):
     """Authenticate user and return JWT token"""
     user = authenticate_user(login_data.username, login_data.password)
+    logger.info(f"User {user.username} logged in successfully")
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
