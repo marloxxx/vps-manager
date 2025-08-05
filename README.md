@@ -8,7 +8,7 @@ A comprehensive VPS management system with advanced monitoring, logging, and sca
 
 ### **Core Features**
 - **Nginx Configuration Management** - Create, edit, and manage Nginx configurations
-- **SSL Certificate Management** - Let's Encrypt integration and custom certificate uploads
+- **SSL Certificate Management** - PTSI wildcard certificate (*.ptsi.co.id) and Let's Encrypt integration
 - **Load Balancing** - Advanced load balancer with health checks
 - **Backup & Restore** - Automated backup system with retention policies
 - **System Monitoring** - Real-time system metrics and health monitoring
@@ -91,7 +91,9 @@ LOG_DIR=/var/log/vps-manager
 LOG_RETENTION_DAYS=30
 
 # SSL Configuration
-SSL_CERT_DIR=/etc/ssl/custom
+SSL_CERT_DIR=/etc/ssl/ptsi
+DEFAULT_SSL_CERT=/etc/ssl/ptsi/wildcard.ptsi.co.id.crt
+DEFAULT_SSL_KEY=/etc/ssl/ptsi/wildcard.ptsi.co.id.key
 LETSENCRYPT_EMAIL=admin@example.com
 ```
 
@@ -147,10 +149,16 @@ GET    /api/configs/{id}/metrics      # Get configuration metrics
 GET    /api/ssl/certificates          # List SSL certificates
 POST   /api/ssl/request-letsencrypt   # Request Let's Encrypt certificate
 POST   /api/ssl/renew/{domain}        # Renew SSL certificate
-POST   /api/ssl/upload                # Upload custom certificate
+POST   /api/ssl/upload                # Upload additional certificates
 GET    /api/ssl/certificate/{domain}/content  # Get certificate content
 GET    /api/ssl/domains               # List SSL domains
 ```
+
+**Default SSL Configuration:**
+- **SSL Directory**: `/etc/ssl/ptsi`
+- **Default Certificate**: `/etc/ssl/ptsi/wildcard.ptsi.co.id.crt`
+- **Default Key**: `/etc/ssl/ptsi/wildcard.ptsi.co.id.key`
+- **Wildcard Domain**: `*.ptsi.co.id`
 
 ### **Load Balancer**
 ```http
@@ -422,6 +430,23 @@ curl -i -N -H "Connection: Upgrade" -H "Upgrade: websocket" \
      -H "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
      -H "Sec-WebSocket-Version: 13" \
      http://localhost:8000/ws/monitoring
+```
+
+#### **SSL Certificate Issues**
+```bash
+# Check PTSI SSL certificate
+ls -la /etc/ssl/ptsi/
+openssl x509 -in /etc/ssl/ptsi/wildcard.ptsi.co.id.crt -text -noout
+
+# Verify certificate validity
+openssl x509 -in /etc/ssl/ptsi/wildcard.ptsi.co.id.crt -checkend 86400 -noout
+
+# Test SSL connection
+curl -I https://your-domain.ptsi.co.id
+
+# Check SSL certificate permissions
+sudo chmod 644 /etc/ssl/ptsi/wildcard.ptsi.co.id.crt
+sudo chmod 600 /etc/ssl/ptsi/wildcard.ptsi.co.id.key
 ```
 
 ### **Performance Issues**

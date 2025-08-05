@@ -42,8 +42,10 @@ COPY README.md .
 
 # Create necessary files and set permissions
 RUN touch config_db.json \
+    && touch users_db.json \
     && chmod -R 755 /opt/vps-manager \
-    && chmod 644 config_db.json
+    && chmod 644 config_db.json \
+    && chmod 644 users_db.json
 
 # Create default SSL certificate files if they don't exist
 RUN touch /etc/ssl/ptsi/wildcard.ptsi.co.id.crt \

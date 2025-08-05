@@ -12,8 +12,7 @@ services:
       - "80:80" # Nginx port
     volumes:
       # Application data
-      - vps_config:/opt/vps-manager/app/config_db.json
-      - vps_users:/opt/vps-manager/app/users_db.json
+      - vps_config:/opt/vps-manager/app
       - vps_logs:/opt/vps-manager/logs
       - vps_backups:/opt/vps-manager/backups
       - vps_templates:/opt/vps-manager/templates
@@ -59,8 +58,6 @@ services:
 
 volumes:
   vps_config:
-    driver: local
-  vps_users:
     driver: local
   vps_logs:
     driver: local
