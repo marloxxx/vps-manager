@@ -35,9 +35,23 @@ import redis
 from cachetools import TTLCache
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
 
 # OAuth2 scheme for token authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+
+# --- Lifespan Event Handler ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler for startup and shutdown."""
+    # Startup
+    logger.info("VPS Manager API starting up...")
+    logger.info("Surveyor Indonesia - VPS Manager v2.0.0")
+    
+    yield
+    
+    # Shutdown
+    logger.info("VPS Manager API shutting down...")
 
 # --- Authentication Models and Functions ---
 
@@ -219,7 +233,8 @@ app = FastAPI(
     description="Advanced reverse proxy management system by Surveyor Indonesia",
     version="2.0.0",
     docs_url="/docs",
-    redoc_url=None
+    redoc_url=None,
+    lifespan=lifespan
 )
 
 # Add CORS middleware with more specific configuration
@@ -2961,32 +2976,6 @@ async def get_task_queue_status(current_user: User = Depends(require_admin)):
         "thread_pool_size": thread_pool._max_workers,
         "active_threads": len(thread_pool._threads)
     }
-
-# --- Background Tasks ---
-from contextlib import asynccontextmanager
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Lifespan event handler for startup and shutdown."""
-    # Startup
-    logger.info("VPS Manager API starting up...")
-    logger.info("Surveyor Indonesia - VPS Manager v2.0.0")
-    
-    yield
-    
-    # Shutdown
-    logger.info("VPS Manager API shutting down...")
-
-# Update FastAPI app with lifespan
-app = FastAPI(
-    title="VPS Manager API - Surveyor Indonesia",
-    description="Advanced reverse proxy management system by Surveyor Indonesia",
-    version="2.0.0",
-    docs_url="/docs",
-    redoc_url=None,
-    lifespan=lifespan
-)
-
 
 
 # Configure structured logging
