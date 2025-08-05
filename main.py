@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ValidationError, Field, field_validator
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import contextlib
 import asyncio
@@ -778,7 +778,7 @@ def generate_nginx_config_content(config: ServerConfig) -> str:
     {security_headers}
     {gzip_config}
 
-    location ~ /\. {{
+    location ~ /\\. {{
         deny all;
     }}
 
@@ -3037,7 +3037,7 @@ def log_performance_metric(
         "event_type": "performance",
         "operation": operation,
         "duration_ms": duration_ms,
-        "timestamp": datetime.now(datetime.timezone.utc).isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "status_code": status_code,
         "details": details or {}
     }
@@ -3060,7 +3060,7 @@ def log_security_event(
         "event_type": "security",
         "severity": severity,
         "message": message,
-        "timestamp": datetime.now(datetime.timezone.utc).isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "ip_address": ip_address,
         "user_id": user_id,
         "details": details or {}
