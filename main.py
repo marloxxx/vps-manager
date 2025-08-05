@@ -11,6 +11,7 @@ from fastapi import FastAPI, HTTPException, status, BackgroundTasks, Depends, We
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, ValidationError, Field, field_validator
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -21,6 +22,19 @@ from collections import defaultdict
 import uuid
 import jwt
 import hashlib
+import aiohttp
+import asyncio
+from typing import Optional
+import structlog
+from structlog.stdlib import LoggerFactory
+import logging.handlers
+import uuid
+import asyncio
+from functools import lru_cache
+import redis
+from cachetools import TTLCache
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
 # OAuth2 scheme for token authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
@@ -376,6 +390,22 @@ class LogEntry(BaseModel):
     status_code: Optional[int] = None
     request_id: Optional[str] = None
 
+class LogFilter(BaseModel):
+    level: Optional[str] = None
+    source: Optional[str] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    user_id: Optional[str] = None
+    action: Optional[str] = None
+    limit: int = 1000
+
+class LogRetentionPolicy(BaseModel):
+    nginx_logs_days: int = 30
+    api_logs_days: int = 90
+    system_logs_days: int = 365
+    audit_logs_days: int = 2555  # 7 years for compliance
+    enabled: bool = True
+
 class BackupRequest(BaseModel):
     include_configs: bool = True
     include_logs: bool = False
@@ -385,6 +415,48 @@ class BackupRequest(BaseModel):
 class RestoreRequest(BaseModel):
     filename: str
     overwrite_existing: bool = False
+
+# --- Real-time Monitoring Models ---
+class SystemMetrics(BaseModel):
+    timestamp: str
+    cpu_usage: float
+    memory_usage: float
+    disk_usage: float
+    network_in: float
+    network_out: float
+    nginx_connections: int
+    nginx_requests_per_second: float
+
+class ConfigMetrics(BaseModel):
+    config_id: str
+    timestamp: str
+    requests_total: int
+    requests_per_second: float
+    response_time_avg: float
+    error_rate: float
+    bandwidth_used: float
+    active_connections: int
+
+class AlertRule(BaseModel):
+    id: str
+    name: str
+    metric: str  # cpu, memory, disk, response_time, error_rate
+    threshold: float
+    operator: str  # >, <, >=, <=, ==
+    duration: int  # seconds
+    enabled: bool = True
+    notification_email: Optional[str] = None
+    notification_webhook: Optional[str] = None
+
+class Alert(BaseModel):
+    id: str
+    rule_id: str
+    timestamp: str
+    metric: str
+    value: float
+    threshold: float
+    status: str  # active, resolved
+    message: str
 
 # --- Frontend Form Models ---
 class ProxyLocationForm(BaseModel):
@@ -1415,7 +1487,6 @@ async def download_backup(
         if not backup_path.exists():
             raise HTTPException(status_code=404, detail="Backup file not found")
         
-        from fastapi.responses import FileResponse
         return FileResponse(
             path=str(backup_path),
             filename=filename,
@@ -2533,14 +2604,6 @@ async def resolve_alert(
             return {"message": "Alert resolved successfully"}
     raise HTTPException(status_code=404, detail="Alert not found")
 
-# --- Scalability Improvements ---
-import asyncio
-from functools import lru_cache
-import redis
-from cachetools import TTLCache
-import threading
-from concurrent.futures import ThreadPoolExecutor
-
 # Redis connection for distributed caching
 try:
     redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
@@ -2655,7 +2718,6 @@ class HealthChecker:
     async def check_backend_health(self, backend_url: str) -> bool:
         """Check if a backend is healthy."""
         try:
-            import aiohttp
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
                 async with session.get(f"{backend_url}/health") as response:
                     return response.status == 200
@@ -2906,84 +2968,7 @@ async def startup_event():
     logger.info("VPS Manager API starting up...")
     logger.info("Surveyor Indonesia - VPS Manager v2.0.0")
 
-# --- Real-time Monitoring Models ---
-class SystemMetrics(BaseModel):
-    timestamp: str
-    cpu_usage: float
-    memory_usage: float
-    disk_usage: float
-    network_in: float
-    network_out: float
-    nginx_connections: int
-    nginx_requests_per_second: float
 
-class ConfigMetrics(BaseModel):
-    config_id: str
-    timestamp: str
-    requests_total: int
-    requests_per_second: float
-    response_time_avg: float
-    error_rate: float
-    bandwidth_used: float
-    active_connections: int
-
-class AlertRule(BaseModel):
-    id: str
-    name: str
-    metric: str  # cpu, memory, disk, response_time, error_rate
-    threshold: float
-    operator: str  # >, <, >=, <=, ==
-    duration: int  # seconds
-    enabled: bool = True
-    notification_email: Optional[str] = None
-    notification_webhook: Optional[str] = None
-
-class Alert(BaseModel):
-    id: str
-    rule_id: str
-    timestamp: str
-    metric: str
-    value: float
-    threshold: float
-    status: str  # active, resolved
-    message: str
-
-# --- Advanced Logging Models ---
-class LogEntry(BaseModel):
-    timestamp: str
-    level: str
-    message: str
-    source: str  # nginx, api, system
-    user_id: Optional[str] = None
-    action: Optional[str] = None
-    resource: Optional[str] = None
-    ip_address: Optional[str] = None
-    user_agent: Optional[str] = None
-    duration_ms: Optional[float] = None
-    status_code: Optional[int] = None
-    request_id: Optional[str] = None
-
-class LogFilter(BaseModel):
-    level: Optional[str] = None
-    source: Optional[str] = None
-    start_time: Optional[str] = None
-    end_time: Optional[str] = None
-    user_id: Optional[str] = None
-    action: Optional[str] = None
-    limit: int = 1000
-
-class LogRetentionPolicy(BaseModel):
-    nginx_logs_days: int = 30
-    api_logs_days: int = 90
-    system_logs_days: int = 365
-    audit_logs_days: int = 2555  # 7 years for compliance
-    enabled: bool = True
-
-# Advanced logging configuration
-import structlog
-from structlog.stdlib import LoggerFactory
-import logging.handlers
-import uuid
 
 # Configure structured logging
 structlog.configure(
@@ -3052,7 +3037,7 @@ def log_performance_metric(
         "event_type": "performance",
         "operation": operation,
         "duration_ms": duration_ms,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(datetime.timezone.utc).isoformat(),
         "status_code": status_code,
         "details": details or {}
     }
@@ -3075,7 +3060,7 @@ def log_security_event(
         "event_type": "security",
         "severity": severity,
         "message": message,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(datetime.timezone.utc).isoformat(),
         "ip_address": ip_address,
         "user_id": user_id,
         "details": details or {}
@@ -3140,9 +3125,6 @@ async def log_requests(request: Request, call_next):
         raise
 
 # --- Telegram Notification System ---
-import aiohttp
-import asyncio
-from typing import Optional
 
 # Telegram Configuration
 TELEGRAM_BOT_TOKEN = "6570760547:AAGJIKY7axGGjGxU5iYmRwU8VKKBk0r1m4g"
