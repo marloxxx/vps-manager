@@ -61,7 +61,7 @@ sudo python3 main.py
 
 ### **Docker Setup**
 ```bash
-# Build and run with Docker
+# Build and run with Docker (API only)
 docker-compose up -d
 
 # Or build manually
@@ -97,9 +97,10 @@ DEFAULT_SSL_KEY=/etc/ssl/ptsi/wildcard.ptsi.co.id.key
 LETSENCRYPT_EMAIL=admin@example.com
 ```
 
-### **Nginx Configuration**
+### **Nginx Configuration (External)**
 ```nginx
 # Example Nginx configuration for the API
+# Run this on your host system, not in Docker
 server {
     listen 80;
     server_name api.vps-manager.com;

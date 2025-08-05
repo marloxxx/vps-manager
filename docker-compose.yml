@@ -8,8 +8,7 @@ services:
     container_name: vps-manager-backend
     restart: unless-stopped
     ports:
-      - "8000:8000" # API port
-      - "80:80" # Nginx port
+      - "8000:8000" # API port only
     volumes:
       # Application data
       - vps_config:/opt/vps-manager/app
@@ -17,17 +16,9 @@ services:
       - vps_backups:/opt/vps-manager/backups
       - vps_templates:/opt/vps-manager/templates
 
-      # Nginx configuration
-      - nginx_config:/etc/nginx
-      - nginx_sites:/etc/nginx/sites-available
-      - nginx_enabled:/etc/nginx/sites-enabled
-
       # SSL certificates
       - ssl_certs:/etc/ssl/ptsi
       - letsencrypt:/etc/letsencrypt
-
-      # System logs
-      - system_logs:/var/log
 
     environment:
       - JWT_SECRET_KEY=your-super-secret-key-change-in-production
@@ -65,17 +56,9 @@ volumes:
     driver: local
   vps_templates:
     driver: local
-  nginx_config:
-    driver: local
-  nginx_sites:
-    driver: local
-  nginx_enabled:
-    driver: local
   ssl_certs:
     driver: local
   letsencrypt:
-    driver: local
-  system_logs:
     driver: local
 
 networks:
