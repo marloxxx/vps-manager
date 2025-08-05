@@ -1,10 +1,11 @@
-# Use Python 3.10 as base image
-FROM python:3.10-slim
+# Use Python 3.11 as base image
+FROM python:3.11-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    DEBIAN_FRONTEND=noninteractive
+    DEBIAN_FRONTEND=noninteractive \
+    TZ=Asia/Jakarta
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -12,9 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     wget \
     htop \
-    systemctl \
     procps \
     sudo \
+    systemctl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -28,7 +29,7 @@ RUN mkdir -p /opt/vps-manager/{app,logs,backups,templates} \
 WORKDIR /opt/vps-manager/app
 
 # Copy requirements first for better caching
-COPY backend/app/requirements.txt .
+COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip \
@@ -36,15 +37,19 @@ RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir uvicorn gunicorn
 
 # Copy application code
-COPY backend/app/ .
-COPY backend/systemd/ /opt/vps-manager/systemd/
-COPY backend/setup.sh /opt/vps-manager/setup.sh
+COPY main.py .
+COPY README.md .
 
 # Create necessary files and set permissions
-RUN touch /opt/vps-manager/app/config_db.json \
-    && chmod +x /opt/vps-manager/setup.sh \
+RUN touch config_db.json \
     && chmod -R 755 /opt/vps-manager \
-    && chmod 644 /opt/vps-manager/app/config_db.json
+    && chmod 644 config_db.json
+
+# Create default SSL certificate files if they don't exist
+RUN touch /etc/ssl/ptsi/wildcard.ptsi.co.id.crt \
+    && touch /etc/ssl/ptsi/wildcard.ptsi.co.id.key \
+    && chmod 644 /etc/ssl/ptsi/wildcard.ptsi.co.id.crt \
+    && chmod 600 /etc/ssl/ptsi/wildcard.ptsi.co.id.key
 
 # Create a backup script
 RUN echo '#!/bin/bash\n\
@@ -56,6 +61,7 @@ RUN echo '#!/bin/bash\n\
     tar -czf "${BACKUP_DIR}/${BACKUP_FILE}" \\\n\
     -C /opt/vps-manager \\\n\
     app/config_db.json \\\n\
+    app/users_db.json \\\n\
     templates/ \\\n\
     --exclude="*.pyc" \\\n\
     --exclude="__pycache__"\n\
@@ -82,18 +88,61 @@ RUN echo 'server {\n\
     }\n' > /etc/nginx/sites-available/default \
     && ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
+# Create systemd service file
+RUN echo '[Unit]\n\
+    Description=VPS Manager API Service\n\
+    After=network.target nginx.service\n\
+    Wants=nginx.service\n\
+    \n\
+    [Service]\n\
+    Type=simple\n\
+    User=root\n\
+    Group=root\n\
+    WorkingDirectory=/opt/vps-manager/app\n\
+    Environment="PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"\n\
+    ExecStart=/usr/local/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2\n\
+    ExecReload=/bin/kill -HUP $MAINPID\n\
+    Restart=always\n\
+    RestartSec=5\n\
+    StandardOutput=journal\n\
+    StandardError=journal\n\
+    \n\
+    [Install]\n\
+    WantedBy=multi-user.target\n' > /etc/systemd/system/vps-manager.service
+
+# Create log rotation configuration
+RUN echo '/opt/vps-manager/logs/*.log {\n\
+    daily\n\
+    missingok\n\
+    rotate 30\n\
+    compress\n\
+    delaycompress\n\
+    notifempty\n\
+    create 644 root root\n\
+    postrotate\n\
+    systemctl reload vps-manager\n\
+    endscript\n\
+    }\n' > /etc/logrotate.d/vps-manager
+
 # Expose API port
-EXPOSE 8000
+EXPOSE 8000 80
 
 # Create entrypoint script
 RUN echo '#!/bin/bash\n\
+    set -e\n\
+    \n\
     # Start Nginx\n\
+    echo "Starting Nginx..."\n\
     nginx -g "daemon off;" &\n\
     \n\
+    # Wait a moment for Nginx to start\n\
+    sleep 2\n\
+    \n\
     # Start FastAPI application\n\
+    echo "Starting VPS Manager API..."\n\
     cd /opt/vps-manager/app\n\
     exec uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2\n' > /opt/vps-manager/entrypoint.sh \
     && chmod +x /opt/vps-manager/entrypoint.sh
 
 # Set entrypoint
-ENTRYPOINT ["/opt/vps-manager/entrypoint.sh"]
+ENTRYPOINT ["/opt/vps-manager/entrypoint.sh"] 

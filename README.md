@@ -1,317 +1,541 @@
-# VPS Manager Backend
+# VPS Manager Backend API
 
-An advanced reverse proxy management system backend built with **FastAPI** and **Python**, designed to power the VPS Manager system with robust configuration management and system monitoring capabilities.
+**Surveyor Indonesia - VPS Manager v2.0.0**
 
----
+A comprehensive VPS management system with advanced monitoring, logging, and scalability features.
 
-## 🚀 Features
+## 🚀 **Features Overview**
 
-- **🔐 Authentication & Authorization**: JWT-based authentication with role-based access control.
-- **👤 User Management**: Comprehensive user management with seeder support.
-- **⚙️ Nginx Configuration**: Dynamic generation and management of Nginx configurations.
-- **📈 System Monitoring**: Real-time system statistics and health monitoring.
-- **📚 API Documentation**: Automatic OpenAPI/Swagger documentation at `/docs`.
+### **Core Features**
+- **Nginx Configuration Management** - Create, edit, and manage Nginx configurations
+- **SSL Certificate Management** - Let's Encrypt integration and custom certificate uploads
+- **Load Balancing** - Advanced load balancer with health checks
+- **Backup & Restore** - Automated backup system with retention policies
+- **System Monitoring** - Real-time system metrics and health monitoring
 
----
+### **Advanced Features**
+- **Real-time Monitoring Dashboard** - WebSocket-based live metrics and alerts
+- **Advanced Logging System** - Structured logging with audit trails and compliance
+- **Scalability Improvements** - Redis caching, connection pooling, and horizontal scaling
+- **Performance Analytics** - Detailed performance metrics and optimization tools
 
-## 📋 Prerequisites
+## 📋 **Table of Contents**
 
-Before setting up the backend, ensure you have:
-- **Python**: Version 3.11 or higher.
-- **Nginx**: Installed and accessible.
-- **Root Access**: Required for Nginx management.
-- **UFW**: Configured to allow traffic on port 8000 (optional, but recommended).
+1. [Installation](#installation)
+2. [Configuration](#configuration)
+3. [API Endpoints](#api-endpoints)
+4. [Real-time Monitoring](#real-time-monitoring)
+5. [Advanced Logging](#advanced-logging)
+6. [Scalability Features](#scalability-features)
+7. [Security](#security)
+8. [Deployment](#deployment)
+9. [Troubleshooting](#troubleshooting)
 
----
+## 🛠️ **Installation**
 
-## 🛠️ Installation
-
-### Quick Setup
-Run the provided setup script to automate installation:
+### **Prerequisites**
 ```bash
-chmod +x setup.sh
-sudo ./setup.sh
-```
-
-The script configures the environment, installs dependencies, sets up services, and seeds default users.
-
----
-
-## 📖 Usage
-
-### Running the API
-#### Development
-Start the development server with hot-reload:
-```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
-
-#### Production
-Run the production server:
-```bash
-python3 main.py
-```
-
-### Using Docker
-#### With Docker Compose
-```bash
-docker-compose up -d
-```
-
-#### Manual Docker Build
-```bash
-# Build Docker image
-docker build -t vps-manager-backend .
-
-# Run container
-docker run -d -p 8000:8000 --name vps-manager-backend vps-manager-backend
-```
-
-### User Management
-The `seeder.py` script provides comprehensive user management:
-```bash
-# Seed default users
-python3 seeder.py seed
-
-# Force overwrite existing users
-python3 seeder.py seed --force
-
-# List all users
-python3 seeder.py list
-
-# Create custom user
-python3 seeder.py create --username newuser --email user@example.com --password password123 --role admin
-
-# Delete user
-python3 seeder.py delete --username username
-
-# Reset password
-python3 seeder.py reset-password --username username --password newpassword
-```
-
-#### Default Users
-The seeder creates the following default users:
-
-| Username   | Email                            | Password      | Role  |
-|------------|----------------------------------|---------------|-------|
-| `admin`    | admin@surveyorindonesia.com     | `admin123`    | admin |
-| `user`     | user@surveyorindonesia.com      | `user123`     | user  |
-| `operator` | operator@surveyorindonesia.com  | `operator123` | user  |
-| `manager`  | manager@surveyorindonesia.com   | `manager123`  | admin |
-
-> **⚠️ Security Note**: Change default passwords in production environments!
-
----
-
-## 🔍 API Endpoints
-
-### Authentication
-- `POST /api/auth/login`: User login.
-- `GET /api/auth/me`: Get current user information.
-- `POST /api/auth/logout`: User logout.
-
-### Configurations
-- `GET /api/configs`: List all configurations.
-- `POST /api/configs`: Create a new configuration.
-- `GET /api/configs/{id}`: Get a specific configuration.
-- `PUT /api/configs/{id}`: Update a configuration.
-- `DELETE /api/configs/{id}`: Delete a configuration.
-- `POST /api/configs/{id}/toggle`: Enable or disable a configuration.
-
-### System Management
-- `GET /api/system/status`: Retrieve system statistics.
-- `POST /api/system/nginx/restart`: Restart Nginx (Admin only).
-- `POST /api/system/nginx/reload`: Reload Nginx configuration (Admin only).
-- `GET /api/system/nginx/logs`: Retrieve Nginx logs.
-
-### Health Check
-- `GET /health`: Check API health status.
-
----
-
-## 🔧 Configuration
-
-### Environment Variables
-| Variable            | Description                            | Default              | Required |
-|---------------------|----------------------------------------|----------------------|----------|
-| `JWT_SECRET_KEY`    | Secret key for JWT tokens              | None                 | Yes      |
-| `BASE_DIR`          | Base directory for VPS Manager         | `/opt/vps-manager`   | No       |
-| `LOG_LEVEL`         | Logging level (e.g., INFO, DEBUG)      | `INFO`               | No       |
-
-Create a `.env` file in production:
-```env
-JWT_SECRET_KEY=your-very-secure-secret-key-here
-BASE_DIR=/opt/vps-manager
-LOG_LEVEL=INFO
-```
-
-### File Structure
-```
-/opt/vps-manager/
-├── config_db.json    # Configuration database
-├── users_db.json     # User database
-├── logs/             # Application logs
-├── backups/          # Configuration backups
-├── templates/        # Configuration templates
-```
-
----
-
-## 🔒 Security
-
-### Authentication
-- JWT-based authentication with configurable token expiration.
-- Role-based access control (admin and user roles).
-- Secure password hashing using SHA-256.
-
-### Permissions
-- **Admin Users**: Full access to all features, including system operations.
-- **Regular Users**: Limited to managing their own configurations.
-- **System Operations**: Require admin privileges.
-
-### Rate Limiting
-- **Global**: 100 requests per hour per IP.
-- **Per-Endpoint**: Configurable limits for sensitive operations.
-
----
-
-## 🏗️ Development
-
-### Project Structure
-```
-vps-manager-backend/
-├── main.py               # Main FastAPI application
-├── auth.py               # Authentication module
-├── seeder.py             # User seeder script
-├── requirements.txt      # Python dependencies
-├── Dockerfile            # Docker configuration
-├── docker-compose.yml    # Docker Compose configuration
-├── setup.sh              # Installation script
-└── README.md             # This file
-```
-
-### Adding New Features
-1. Create new endpoints in `main.py`.
-2. Add authentication decorators as needed.
-3. Update models and validation schemas.
-4. Add tests for new functionality.
-
-### Database
-The system uses JSON files for simplicity:
-- `users_db.json`: Stores user accounts and authentication data.
-- `config_db.json`: Stores Nginx configurations.
-
-For production, consider migrating to a database like **PostgreSQL** for better scalability.
-
----
-
-## 🚀 Deployment
-
-### Production Setup
-1. **Install on Server**:
-```bash
-# Copy files to /opt/vps-manager
-sudo cp -r . /opt/vps-manager
+# System requirements
+- Python 3.8+
+- Nginx
+- Redis (optional, for caching)
+- Docker (optional)
 
 # Install system dependencies
 sudo apt update
-sudo apt install -y python3-venv nginx
+sudo apt install python3 python3-pip nginx redis-server
+```
 
-# Setup virtual environment
-cd /opt/vps-manager
-python3 -m venv venv
-source venv/bin/activate
+### **Backend Setup**
+```bash
+# Clone repository
+git clone <repository-url>
+cd vps-manager-backend
+
+# Install Python dependencies
 pip install -r requirements.txt
 
-# Seed users
-python3 seeder.py seed
+# Run as root (required for Nginx management)
+sudo python3 main.py
 ```
 
-2. **Create Systemd Service**:
-```ini
-[Unit]
-Description=VPS Manager Backend API
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/opt/vps-manager
-Environment="PATH=/opt/vps-manager/venv/bin"
-ExecStart=/opt/vps-manager/venv/bin/python main.py
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Save to `/etc/systemd/system/vps-manager.service`.
-
-3. **Enable and Start Service**:
+### **Docker Setup**
 ```bash
+# Build and run with Docker
+docker-compose up -d
+
+# Or build manually
+docker build -t vps-manager-backend .
+docker run -p 8000:8000 vps-manager-backend
+```
+
+## ⚙️ **Configuration**
+
+### **Environment Variables**
+```bash
+# API Configuration
+API_HOST=0.0.0.0
+API_PORT=8000
+SECRET_KEY=your-secret-key
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# Redis Configuration (optional)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_DB=0
+
+# Logging Configuration
+LOG_LEVEL=INFO
+LOG_DIR=/var/log/vps-manager
+LOG_RETENTION_DAYS=30
+
+# SSL Configuration
+SSL_CERT_DIR=/etc/ssl/custom
+LETSENCRYPT_EMAIL=admin@example.com
+```
+
+### **Nginx Configuration**
+```nginx
+# Example Nginx configuration for the API
+server {
+    listen 80;
+    server_name api.vps-manager.com;
+    
+    location / {
+        proxy_pass http://localhost:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    location /ws/ {
+        proxy_pass http://localhost:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+```
+
+## 📡 **API Endpoints**
+
+### **Authentication**
+```http
+POST /api/auth/login
+POST /api/auth/logout
+GET  /api/auth/me
+```
+
+### **Configuration Management**
+```http
+GET    /api/configs                    # List all configurations
+GET    /api/configs/{id}              # Get specific configuration
+POST   /api/configs                   # Create new configuration
+PUT    /api/configs/{id}              # Update configuration
+DELETE /api/configs/{id}              # Delete configuration
+POST   /api/configs/{id}/toggle       # Toggle configuration status
+POST   /api/configs/{id}/test         # Test configuration
+POST   /api/configs/validate          # Validate configuration
+GET    /api/configs/{id}/form         # Get configuration for form editing
+GET    /api/configs/{id}/metrics      # Get configuration metrics
+```
+
+### **SSL Certificate Management**
+```http
+GET    /api/ssl/certificates          # List SSL certificates
+POST   /api/ssl/request-letsencrypt   # Request Let's Encrypt certificate
+POST   /api/ssl/renew/{domain}        # Renew SSL certificate
+POST   /api/ssl/upload                # Upload custom certificate
+GET    /api/ssl/certificate/{domain}/content  # Get certificate content
+GET    /api/ssl/domains               # List SSL domains
+```
+
+### **Load Balancer**
+```http
+GET    /api/load-balancer/pools       # List load balancer pools
+POST   /api/load-balancer/pools       # Create load balancer pool
+```
+
+### **Backup & Restore**
+```http
+GET    /api/backup/list               # List backups
+POST   /api/backup/create             # Create backup
+GET    /api/backup/download/{filename} # Download backup
+POST   /api/backup/restore/{filename} # Restore backup
+DELETE /api/backup/delete/{filename}  # Delete backup
+```
+
+### **System Management**
+```http
+GET    /api/system/status             # Get system status
+POST   /api/system/nginx/restart      # Restart Nginx
+POST   /api/system/nginx/reload       # Reload Nginx
+GET    /api/system/nginx/logs         # Get Nginx logs
+```
+
+### **Log Management**
+```http
+GET    /api/logs/nginx                # Get Nginx logs
+GET    /api/logs/application          # Get application logs
+GET    /api/logs/system               # Get system logs
+GET    /api/logs/structured           # Get structured logs
+GET    /api/logs/audit                # Get audit logs
+GET    /api/logs/performance          # Get performance logs
+GET    /api/logs/security             # Get security logs
+GET    /api/logs/retention-policy     # Get retention policy
+PUT    /api/logs/retention-policy     # Update retention policy
+POST   /api/logs/cleanup              # Clean up old logs
+```
+
+## 📊 **Real-time Monitoring**
+
+### **WebSocket Endpoints**
+```http
+WS /ws/monitoring                     # Real-time monitoring stream
+```
+
+### **Monitoring APIs**
+```http
+GET    /api/monitoring/metrics        # Get current metrics
+GET    /api/monitoring/metrics/history # Get metrics history
+POST   /api/monitoring/alerts/rules   # Create alert rule
+GET    /api/monitoring/alerts/rules   # List alert rules
+PUT    /api/monitoring/alerts/rules/{id} # Update alert rule
+DELETE /api/monitoring/alerts/rules/{id} # Delete alert rule
+GET    /api/monitoring/alerts         # Get alerts
+POST   /api/monitoring/alerts/{id}/resolve # Resolve alert
+```
+
+### **Metrics Collected**
+- **System Metrics**: CPU, Memory, Disk, Network usage
+- **Nginx Metrics**: Connections, Requests per second
+- **Application Metrics**: Response times, Error rates
+- **Custom Metrics**: User-defined metrics and alerts
+
+### **Alert System**
+- **Threshold-based alerts** for system metrics
+- **Email notifications** for critical alerts
+- **Webhook integrations** for external systems
+- **Alert resolution** and history tracking
+
+## 📝 **Advanced Logging**
+
+### **Log Types**
+- **Structured Logs**: JSON-formatted application logs
+- **Audit Logs**: User actions and compliance tracking
+- **Performance Logs**: Request timing and performance metrics
+- **Security Logs**: Security events and threat detection
+
+### **Log Features**
+- **Structured JSON logging** with consistent format
+- **Log filtering** by level, source, time range
+- **Log retention policies** with automatic cleanup
+- **Compliance logging** for regulatory requirements
+- **Performance tracking** with detailed metrics
+
+### **Log Management**
+```bash
+# View logs
+tail -f /var/log/vps-manager/structured.log
+tail -f /var/log/vps-manager/audit.log
+tail -f /var/log/vps-manager/performance.log
+
+# Log rotation
+logrotate /etc/logrotate.d/vps-manager
+```
+
+## 🔧 **Scalability Features**
+
+### **Caching System**
+- **Redis caching** for distributed environments
+- **In-memory cache** fallback for single instances
+- **Cache statistics** and monitoring
+- **Cache invalidation** strategies
+
+### **Connection Pooling**
+- **Database connection pooling** for high concurrency
+- **Connection monitoring** and statistics
+- **Automatic connection management**
+- **Connection health checks**
+
+### **Horizontal Scaling**
+- **Cluster management** for multi-node deployments
+- **Load distribution** across nodes
+- **Node health monitoring**
+- **Task distribution** and queuing
+
+### **Performance Monitoring**
+```http
+GET    /api/performance/cache/stats   # Cache statistics
+POST   /api/performance/cache/clear   # Clear cache
+GET    /api/performance/connections   # Connection pool stats
+```
+
+### **Health Checks**
+```http
+GET    /api/health/backend/{url}      # Check backend health
+GET    /api/health/backends           # Get all backend status
+```
+
+### **Task Queue**
+```http
+POST   /api/tasks/queue               # Add background task
+GET    /api/tasks/queue/status        # Get queue status
+```
+
+## 🔒 **Security**
+
+### **Authentication**
+- **JWT-based authentication** with secure tokens
+- **Role-based access control** (Admin/User roles)
+- **Session management** with automatic expiration
+- **Secure password handling**
+
+### **Authorization**
+- **Endpoint-level permissions** for sensitive operations
+- **Resource-based access control**
+- **Audit logging** for all administrative actions
+- **IP-based access restrictions**
+
+### **Security Features**
+- **Rate limiting** to prevent abuse
+- **Input validation** and sanitization
+- **SQL injection protection**
+- **XSS protection** with proper headers
+- **CORS configuration** for web applications
+
+### **Compliance**
+- **GDPR compliance** with data retention policies
+- **Audit trails** for regulatory requirements
+- **Security event logging** and monitoring
+- **Data encryption** for sensitive information
+
+## 🚀 **Deployment**
+
+### **Production Deployment**
+```bash
+# Systemd service
+sudo cp vps-manager.service /etc/systemd/system/
 sudo systemctl enable vps-manager
 sudo systemctl start vps-manager
+
+# Nginx configuration
+sudo cp nginx.conf /etc/nginx/sites-available/vps-manager
+sudo ln -s /etc/nginx/sites-available/vps-manager /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
+### **Docker Deployment**
+```yaml
+# docker-compose.yml
+version: '3.8'
+services:
+  vps-manager:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./logs:/var/log/vps-manager
+      - ./configs:/etc/nginx/conf.d
+    environment:
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
+  
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+```
+
+### **Kubernetes Deployment**
+```yaml
+# k8s-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vps-manager
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: vps-manager
+  template:
+    metadata:
+      labels:
+        app: vps-manager
+    spec:
+      containers:
+      - name: vps-manager
+        image: vps-manager:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: REDIS_HOST
+          value: "redis-service"
+```
+
+## 🔍 **Troubleshooting**
+
+### **Common Issues**
+
+#### **Permission Denied**
+```bash
+# Ensure running as root for Nginx management
+sudo python3 main.py
+
+# Check file permissions
+sudo chown -R root:root /etc/nginx/conf.d/
+sudo chmod 644 /etc/nginx/conf.d/*
+```
+
+#### **Nginx Configuration Errors**
+```bash
+# Test Nginx configuration
+sudo nginx -t
+
+# Check Nginx status
+sudo systemctl status nginx
+
+# View Nginx error logs
+sudo tail -f /var/log/nginx/error.log
+```
+
+#### **Redis Connection Issues**
+```bash
+# Check Redis status
+sudo systemctl status redis
+
+# Test Redis connection
+redis-cli ping
+
+# Check Redis logs
+sudo tail -f /var/log/redis/redis-server.log
+```
+
+#### **WebSocket Connection Issues**
+```bash
+# Check WebSocket endpoint
+curl -i -N -H "Connection: Upgrade" -H "Upgrade: websocket" \
+     -H "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
+     -H "Sec-WebSocket-Version: 13" \
+     http://localhost:8000/ws/monitoring
+```
+
+### **Performance Issues**
+
+#### **High Memory Usage**
+```bash
+# Check memory usage
+free -h
+ps aux --sort=-%mem | head
+
+# Monitor cache usage
+curl http://localhost:8000/api/performance/cache/stats
+```
+
+#### **Slow Response Times**
+```bash
+# Check system load
+uptime
+top
+
+# Monitor performance logs
+curl http://localhost:8000/api/logs/performance?limit=100
+```
+
+### **Log Analysis**
+
+#### **Structured Logs**
+```bash
+# View recent logs
+tail -f /var/log/vps-manager/structured.log | jq
+
+# Filter by level
+grep '"level":"ERROR"' /var/log/vps-manager/structured.log | jq
+```
+
+#### **Audit Logs**
+```bash
+# View user actions
+tail -f /var/log/vps-manager/audit.log | jq
+
+# Search for specific user
+grep '"user_id":"admin"' /var/log/vps-manager/audit.log | jq
+```
+
+## 📚 **API Documentation**
+
+### **Interactive Documentation**
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
+- **OpenAPI Schema**: `http://localhost:8000/openapi.json`
+
+### **Example Requests**
+
+#### **Create Configuration**
+```bash
+curl -X POST "http://localhost:8000/api/configs" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "example-app",
+  "server_name": "example.com",
+    "listen_port": 80,
+  "locations": [
+    {
+      "path": "/",
+        "backend": "http://localhost:3000"
+      }
+    ]
+  }'
+```
+
+#### **Monitor Real-time Metrics**
+```javascript
+// WebSocket connection
+const ws = new WebSocket('ws://localhost:8000/ws/monitoring');
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log('System metrics:', data.system);
+  console.log('Active alerts:', data.alerts);
+};
+```
+
+## 🤝 **Contributing**
+
+### **Development Setup**
+```bash
+# Install development dependencies
+pip install -r requirements-dev.txt
+
+# Run tests
+pytest tests/
+
+# Run linting
+flake8 main.py
+black main.py
+```
+
+### **Code Style**
+- **PEP 8** compliance
+- **Type hints** for all functions
+- **Docstrings** for all classes and methods
+- **Error handling** with proper logging
+
+## 📄 **License**
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 **Support**
+
+- **Documentation**: [Wiki](https://github.com/surveyor-indonesia/vps-manager/wiki)
+- **Issues**: [GitHub Issues](https://github.com/surveyor-indonesia/vps-manager/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/surveyor-indonesia/vps-manager/discussions)
+
 ---
 
-## 🐛 Troubleshooting
-
-### Common Issues
-1. **Permission Denied Errors**:
-   - Ensure the application runs as root for Nginx management.
-   - Verify file permissions on `/opt/vps-manager` (e.g., `sudo chmod -R 755 /opt/vps-manager`).
-
-2. **User Database Not Found**:
-   - Run the seeder: `python3 seeder.py seed`.
-   - Check if `/opt/vps-manager/users_db.json` exists.
-
-3. **Nginx Commands Fail**:
-   - Ensure Nginx is installed and accessible (`nginx -t`).
-   - Verify the user has sudo privileges for Nginx operations.
-
-### Logs
-- **Application Logs**: `/opt/vps-manager/logs/vps-manager.log`.
-- **Systemd Logs**: `journalctl -u vps-manager -f`.
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
----
-
-## 🆘 Support
-
-For support and questions:
-- **Email**: support@surveyorindonesia.com
-- **GitHub Issues**: Create an issue on the repository for bugs or feature requests.
-
-### Reporting Bugs
-Include the following:
-1. **Environment**: OS, Python version, Nginx version.
-2. **Steps to Reproduce**: Detailed steps to recreate the issue.
-3. **Expected Behavior**: What should happen.
-4. **Actual Behavior**: What actually happens.
-5. **Logs**: Relevant logs from `/opt/vps-manager/logs` or `journalctl`.
-
-### Feature Requests
-Provide the following:
-1. **Use Case**: Why is this feature needed?
-2. **Description**: Detailed description of the feature.
-3. **Priority**: How important is this feature?
-
----
-
-## 🙏 Acknowledgments
-
-- **FastAPI Team**: For the high-performance API framework.
-- **Nginx**: For the robust web server.
-- **Surveyor Indonesia**: For project sponsorship and support.
-
----
-
-**Made with ❤️ by Surveyor Indonesia**
-
-For more information, visit our [website](https://ptsi.co.id).
+**Surveyor Indonesia - VPS Manager v2.0.0**  
+*Comprehensive VPS Management with Advanced Monitoring & Scalability*

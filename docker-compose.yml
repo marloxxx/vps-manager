@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  vps-manager-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vps-manager-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000" # API port
+      - "80:80" # Nginx port
+    volumes:
+      # Application data
+      - vps_config:/opt/vps-manager/app/config_db.json
+      - vps_users:/opt/vps-manager/app/users_db.json
+      - vps_logs:/opt/vps-manager/logs
+      - vps_backups:/opt/vps-manager/backups
+      - vps_templates:/opt/vps-manager/templates
+
+      # Nginx configuration
+      - nginx_config:/etc/nginx
+      - nginx_sites:/etc/nginx/sites-available
+      - nginx_enabled:/etc/nginx/sites-enabled
+
+      # SSL certificates
+      - ssl_certs:/etc/ssl/ptsi
+      - letsencrypt:/etc/letsencrypt
+
+      # System logs
+      - system_logs:/var/log
+
+    environment:
+      - JWT_SECRET_KEY=your-super-secret-key-change-in-production
+      - TZ=Asia/Jakarta
+      - PYTHONPATH=/opt/vps-manager/app
+
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    networks:
+      - vps-manager-network
+
+    # Privileged mode for systemctl and nginx operations
+    privileged: true
+
+    # Add necessary capabilities
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  vps_config:
+    driver: local
+  vps_users:
+    driver: local
+  vps_logs:
+    driver: local
+  vps_backups:
+    driver: local
+  vps_templates:
+    driver: local
+  nginx_config:
+    driver: local
+  nginx_sites:
+    driver: local
+  nginx_enabled:
+    driver: local
+  ssl_certs:
+    driver: local
+  letsencrypt:
+    driver: local
+  system_logs:
+    driver: local
+
+networks:
+  vps-manager-network:
+    driver: bridge
