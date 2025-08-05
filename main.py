@@ -3308,3 +3308,24 @@ def check_alerts_with_notification(metrics: SystemMetrics):
                 
                 # Send Telegram notification
                 asyncio.create_task(telegram_notifier.send_alert_notification(alert))
+
+# --- Server Startup ---
+if __name__ == "__main__":
+    import uvicorn
+    
+    print("🚀 Starting VPS Manager Backend...")
+    print("📁 Working directory:", os.getcwd())
+    print("🌐 Server will be available at: http://0.0.0.0:8000")
+    print("📚 API Documentation: http://0.0.0.0:8000/docs")
+    print("🔍 Health Check: http://0.0.0.0:8000/health")
+    print("=" * 60)
+    
+    # Run the server
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=False,  # Set to True for development
+        log_level="info",
+        access_log=True
+    )
