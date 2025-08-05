@@ -63,6 +63,21 @@ chmod +x setup-admin.sh
 sudo python3 main.py
 ```
 
+### **Docker Setup with Login Fix**
+```bash
+# Fix JWT dependency and rebuild
+chmod +x fix-jwt-dependency.sh
+./fix-jwt-dependency.sh
+
+# Setup admin account in Docker
+chmod +x setup-admin-docker.sh
+./setup-admin-docker.sh
+
+# Test login
+chmod +x test-login.sh
+./test-login.sh
+```
+
 ### **Docker Setup**
 ```bash
 # Build and run with Docker (API only)

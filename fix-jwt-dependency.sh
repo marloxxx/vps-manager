@@ -4,7 +4,7 @@ echo "🔧 Fixing JWT dependency issue..."
 
 # Stop current container
 echo "🛑 Stopping current container..."
-docker-compose down
+docker compose down
 
 # Remove old image to force rebuild
 echo "🗑️ Removing old image..."
@@ -12,11 +12,11 @@ docker rmi vps-manager-backend_vps-manager-backend 2>/dev/null || true
 
 # Build new image with updated requirements
 echo "🔨 Building new image with JWT dependency..."
-docker-compose build --no-cache
+docker compose build --no-cache
 
 # Start container
 echo "🚀 Starting container..."
-docker-compose up -d
+docker compose up -d
 
 # Wait for container to be ready
 echo "⏳ Waiting for container to be ready..."

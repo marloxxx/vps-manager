@@ -58,13 +58,13 @@ restore_data() {
 if ! docker ps | grep -q $CONTAINER_NAME; then
     echo "❌ Container $CONTAINER_NAME is not running"
     echo "Starting container first..."
-    docker-compose up -d
+    docker compose up -d
     sleep 10
 fi
 
 # Stop current container
 echo "🛑 Stopping current container..."
-docker-compose down
+docker compose down
 
 # Backup data
 backup_data
