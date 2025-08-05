@@ -85,27 +85,8 @@ cd vps-manager-backend
 # Install Python dependencies
 pip install -r requirements.txt
 
-# Setup admin account
-chmod +x setup-admin.sh
-./setup-admin.sh
-
 # Run as root (required for Nginx management)
 sudo python3 main.py
-```
-
-### **Docker Setup with Login Fix**
-```bash
-# Fix JWT dependency and rebuild
-chmod +x fix-jwt-dependency.sh
-./fix-jwt-dependency.sh
-
-# Setup admin account in Docker
-chmod +x setup-admin-docker.sh
-./setup-admin-docker.sh
-
-# Test login
-chmod +x test-login.sh
-./test-login.sh
 ```
 
 ### **Docker Setup**

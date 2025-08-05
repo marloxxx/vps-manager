@@ -2963,11 +2963,29 @@ async def get_task_queue_status(current_user: User = Depends(require_admin)):
     }
 
 # --- Background Tasks ---
-@app.on_event("startup")
-async def startup_event():
-    """Initialize application on startup."""
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler for startup and shutdown."""
+    # Startup
     logger.info("VPS Manager API starting up...")
     logger.info("Surveyor Indonesia - VPS Manager v2.0.0")
+    
+    yield
+    
+    # Shutdown
+    logger.info("VPS Manager API shutting down...")
+
+# Update FastAPI app with lifespan
+app = FastAPI(
+    title="VPS Manager API - Surveyor Indonesia",
+    description="Advanced reverse proxy management system by Surveyor Indonesia",
+    version="2.0.0",
+    docs_url="/docs",
+    redoc_url=None,
+    lifespan=lifespan
+)
 
 
 
