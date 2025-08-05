@@ -143,7 +143,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     if user_data is None:
         raise credentials_exception
     
-    return User(**user_data)
+    return User(
+        username=user_data["username"],
+        email=user_data.get("email"),
+        role=user_data.get("role", "user"),
+        is_active=user_data.get("is_active", True)
+    )
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
     """Require admin role for endpoint"""
@@ -153,9 +158,6 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
             detail="Admin privileges required"
         )
     return current_user
-
-# OAuth2 scheme for token authentication
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 # --- Configuration ---
 BASE_DIR = Path("/opt/vps-manager")
@@ -195,6 +197,9 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+# OAuth2 scheme for token authentication
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 # --- Initialize FastAPI App ---
 app = FastAPI(
