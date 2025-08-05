@@ -496,8 +496,8 @@ class SSLUploadRequest(BaseModel):
 @app.post("/api/auth/login", response_model=TokenResponse)
 async def login(login_data: LoginRequest):
     """Authenticate user and return JWT token"""
+    logger.info(f"Login request received for user: {login_data.username}")
     user = authenticate_user(login_data.username, login_data.password)
-    logger.info(f"User {user.username} logged in successfully")
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
