@@ -29,9 +29,6 @@ SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-super-secret-key-change-in-produc
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# User Database
-USERS_DB = BASE_DIR / "app" / "users_db.json"
-
 class User(BaseModel):
     username: str
     email: Optional[str] = None
@@ -165,6 +162,7 @@ NGINX_DIR = Path("/etc/nginx")
 NGINX_SITES_AVAILABLE = NGINX_DIR / "sites-available"
 NGINX_SITES_ENABLED = NGINX_DIR / "sites-enabled"
 CONFIG_DB = BASE_DIR / "app" / "config_db.json"
+USERS_DB = BASE_DIR / "app" / "users_db.json"
 LOG_DIR = BASE_DIR / "logs"
 BACKUP_DIR = BASE_DIR / "backups"
 TEMPLATES_DIR = BASE_DIR / "templates"
