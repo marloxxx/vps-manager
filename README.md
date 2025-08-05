@@ -46,7 +46,37 @@ sudo apt update
 sudo apt install python3 python3-pip nginx redis-server
 ```
 
-### **Backend Setup**
+### **Manual Setup (Recommended)**
+
+#### **Development Environment**
+```bash
+# Clone repository
+git clone <repository-url>
+cd vps-manager-backend
+
+# Setup development environment with virtual environment
+chmod +x setup-dev.sh
+./setup-dev.sh
+
+# Start development server
+./run-dev.sh
+```
+
+#### **Production Environment**
+```bash
+# Clone repository
+git clone <repository-url>
+cd vps-manager-backend
+
+# Setup production environment with systemctl
+sudo chmod +x setup-manual.sh
+sudo ./setup-manual.sh
+
+# Service will be automatically started and enabled
+sudo systemctl status vps-manager
+```
+
+### **Legacy Setup (Not Recommended)**
 ```bash
 # Clone repository
 git clone <repository-url>
@@ -81,7 +111,7 @@ chmod +x test-login.sh
 ### **Docker Setup**
 ```bash
 # Build and run with Docker (API only)
-docker-compose up -d
+docker compose up -d
 
 # Or build manually
 docker build -t vps-manager-backend .
